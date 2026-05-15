@@ -3,8 +3,8 @@ builder = "NIXPACKS"
 nixpacksConfigPath = "nixpacks.toml"
 
 [deploy]
-# Overrides dashboard pre-deploy — no-op so UI "stuck" command does not break deploy
-preDeployCommand = "echo Pre-deploy skipped; migrations run at app start"
+# Must not use ";" in the string — shell treats it as a second command and fails
+preDeployCommand = "true"
 startCommand = "npm start"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
