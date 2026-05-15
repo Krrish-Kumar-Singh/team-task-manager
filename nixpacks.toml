@@ -1,6 +1,8 @@
-# Railway/Nixpacks — pin Node 22 LTS (avoid Node 23 EOL / Python mismatches)
-[phases.setup]
-nixPkgs = ["nodejs_22"]
+# Let Railway/Nixpacks auto-detect Node from .nvmrc (22) and package.json engines.
+# Do NOT pin nixPkgs = ["nodejs_22"] — that often causes "undefined variable nodejs_22" build errors.
+
+[variables]
+NIXPACKS_NODE_VERSION = "22"
 
 [phases.install]
 cmds = ["npm install"]
@@ -9,4 +11,4 @@ cmds = ["npm install"]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npm start"
+cmd = "npm run start --prefix server"
