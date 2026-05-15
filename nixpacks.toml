@@ -1,6 +1,3 @@
-# Let Railway/Nixpacks auto-detect Node from .nvmrc (22) and package.json engines.
-# Do NOT pin nixPkgs = ["nodejs_22"] — that often causes "undefined variable nodejs_22" build errors.
-
 [variables]
 NIXPACKS_NODE_VERSION = "22"
 

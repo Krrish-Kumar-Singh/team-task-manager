@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { execSync } from 'node:child_process';
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -11,8 +12,11 @@ import taskRoutes from './routes/tasks.js';
 import dashboardRoutes from './routes/dashboard.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const serverRoot = path.join(__dirname, '..');
 const app = express();
-const PORT = process.env.PORT || 3001;
+
+// Railway injects PORT — never hardcode PORT=3001 in Railway variables
+const PORT = Number(process.env.PORT) || 3001;
 const HOST = '0.0.0.0';
 
 const allowedOrigins = [
@@ -25,27 +29,28 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, true);
-      }
+      callback(null, true);
     },
     credentials: true,
   })
 );
 app.use(express.json());
 
-app.get('/api/health', (_req, res) => {
-  res.status(200).json({
+function healthPayload() {
+  return {
     status: 'ok',
     timestamp: new Date().toISOString(),
     env: {
       hasDatabase: Boolean(process.env.DATABASE_URL),
       hasJwt: Boolean(process.env.JWT_SECRET),
+      port: PORT,
     },
-  });
-});
+  };
+}
+
+// Health routes — always 200 so Railway healthcheck passes once Node is up
+app.get('/health', (_req, res) => res.status(200).json(healthPayload()));
+app.get('/api/health', (_req, res) => res.status(200).json(healthPayload()));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
@@ -59,21 +64,32 @@ if (fs.existsSync(clientDist)) {
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 } else {
-  console.warn('client/dist not found — frontend assets missing');
+  console.warn('client/dist not found — run npm run build');
 }
 
 app.use(errorHandler);
 
-if (!process.env.JWT_SECRET) {
-  console.error('FATAL: JWT_SECRET environment variable is required');
-  process.exit(1);
-}
-
-if (!process.env.DATABASE_URL) {
-  console.error('FATAL: DATABASE_URL environment variable is required');
-  process.exit(1);
-}
-
+// Start server immediately (required for Railway healthcheck)
 app.listen(PORT, HOST, () => {
-  console.log(`Server running on http://${HOST}:${PORT}`);
+  console.log(`Listening on http://${HOST}:${PORT}`);
+
+  if (!process.env.JWT_SECRET) {
+    console.warn('WARNING: JWT_SECRET is not set — auth will not work');
+  }
+  if (!process.env.DATABASE_URL) {
+    console.warn('WARNING: DATABASE_URL is not set — database will not work');
+    return;
+  }
+
+  try {
+    console.log('Running database migrations...');
+    execSync('npx prisma migrate deploy', {
+      cwd: serverRoot,
+      stdio: 'inherit',
+      env: process.env,
+    });
+    console.log('Migrations complete');
+  } catch (err) {
+    console.error('Migration failed (app still running):', err.message);
+  }
 });

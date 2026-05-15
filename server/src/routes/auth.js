@@ -9,6 +9,9 @@ import { signupSchema, loginSchema } from '../validators/schemas.js';
 const router = Router();
 
 function signToken(userId) {
+  if (!process.env.JWT_SECRET) {
+    throw new AppError('Server misconfigured: JWT_SECRET missing', 503);
+  }
   return jwt.sign({ sub: userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
 }
 
