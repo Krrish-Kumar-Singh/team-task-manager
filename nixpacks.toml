@@ -1,3 +1,4 @@
+# Fallback only if Dockerfile build is disabled. Prefer Dockerfile on Railway.
 [variables]
 NIXPACKS_NODE_VERSION = "22"
 
@@ -8,4 +9,4 @@ cmds = ["npm install"]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npm run start --prefix server"
+cmd = "npm start"

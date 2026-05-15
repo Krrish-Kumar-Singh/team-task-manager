@@ -71,7 +71,8 @@ app.use(errorHandler);
 
 // Start server immediately (required for Railway healthcheck)
 app.listen(PORT, HOST, () => {
-  console.log(`Listening on http://${HOST}:${PORT}`);
+  console.log(`[startup] Railway PORT=${process.env.PORT} listening on http://${HOST}:${PORT}`);
+  console.log(`[startup] Set public networking target port to ${PORT}`);
 
   if (!process.env.JWT_SECRET) {
     console.warn('WARNING: JWT_SECRET is not set — auth will not work');
