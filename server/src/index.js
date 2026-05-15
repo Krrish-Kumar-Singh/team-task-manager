@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -12,6 +13,7 @@ import dashboardRoutes from './routes/dashboard.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
+const HOST = '0.0.0.0';
 
 const allowedOrigins = [
   process.env.CLIENT_ORIGIN,
@@ -35,7 +37,14 @@ app.use(
 app.use(express.json());
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    env: {
+      hasDatabase: Boolean(process.env.DATABASE_URL),
+      hasJwt: Boolean(process.env.JWT_SECRET),
+    },
+  });
 });
 
 app.use('/api/auth', authRoutes);
@@ -44,18 +53,27 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 const clientDist = path.join(__dirname, '../../client/dist');
-app.use(express.static(clientDist));
-app.get(/^\/(?!api).*/, (_req, res) => {
-  res.sendFile(path.join(clientDist, 'index.html'));
-});
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  app.get(/^\/(?!api).*/, (_req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+} else {
+  console.warn('client/dist not found — frontend assets missing');
+}
 
 app.use(errorHandler);
 
 if (!process.env.JWT_SECRET) {
-  console.error('JWT_SECRET environment variable is required');
+  console.error('FATAL: JWT_SECRET environment variable is required');
   process.exit(1);
 }
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+if (!process.env.DATABASE_URL) {
+  console.error('FATAL: DATABASE_URL environment variable is required');
+  process.exit(1);
+}
+
+app.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}`);
 });
