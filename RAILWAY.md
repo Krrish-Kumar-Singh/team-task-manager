@@ -1,39 +1,49 @@
-# Railway deployment checklist
+# Railway setup (TaskFlow)
 
-## Required services
+## Your config is mostly correct
 
-1. **Web service** — this repo
-2. **PostgreSQL** — add from Railway dashboard
+These settings are fine:
 
-## Required variables (web service)
+- `builder = NIXPACKS`
+- `startCommand = npm start`
+- `healthcheckPath = /api/health`
 
-| Variable | How to set |
-|----------|------------|
-| `DATABASE_URL` | Reference from PostgreSQL service → `${{Postgres.DATABASE_URL}}` |
-| `JWT_SECRET` | Generate a long random string (32+ chars) |
+## Required variables (web service `team-task-manager`)
+
+| Variable | Value |
+|----------|--------|
+| `DATABASE_URL` | **Variable reference** → Postgres → `DATABASE_URL` |
+| `JWT_SECRET` | Long secret string |
 | `NODE_ENV` | `production` |
 
-Optional: `RAILWAY_PUBLIC_DOMAIN` is set automatically by Railway.
+## Do NOT set
 
-## Link Postgres to the web service
+| Variable | Why |
+|----------|-----|
+| `PORT` | Railway sets this automatically — `PORT=3001` breaks healthcheck |
+| `CLIENT_ORIGIN=http://localhost:5173` | Wrong for production |
 
-1. Click your **web** service → **Variables**
-2. **New Variable** → **Add reference** → select PostgreSQL → `DATABASE_URL`
-3. Add `JWT_SECRET` manually
-4. Redeploy
+## Optional
 
-## Healthcheck
+`CLIENT_ORIGIN` = your public Railway URL, e.g. `https://xxx.up.railway.app`
 
-- Path: `/api/health`
-- Must return `200` with `{ "status": "ok" }`
+## Dashboard vs repo
 
-If healthcheck fails, open **Deploy logs** and look for:
+Railway reads `railway.json` / `railway.toml` from GitHub. After push, redeploy.
 
-- `FATAL: JWT_SECRET` → add `JWT_SECRET`
-- `FATAL: DATABASE_URL` → link PostgreSQL
-- `P1001` / Can't reach database → Postgres not linked or wrong URL
-- `prisma migrate` failed → check pre-deploy logs
+In the dashboard you can set **healthcheckTimeout** to **300** (seconds).
 
-## After deploy
+## Test after deploy
 
-Open your Railway public URL — you should see the TaskFlow login page.
+```
+https://YOUR-APP.up.railway.app/api/health
+```
+
+Expect: `"status": "ok"`, `"hasDatabase": true`, `"hasJwt": true`
+
+## Project layout (one project)
+
+```
+Postgres          → Online
+team-task-manager → Online (after variables + deploy)
+```
