@@ -1,0 +1,20 @@
+{
+  "name": "team-task-manager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Full-stack team task manager with role-based access",
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "postinstall": "npm install --prefix server && npm install --prefix client",
+    "build": "npm run build --prefix client && npm run db:generate --prefix server",
+    "start": "npm run db:migrate && npm run start --prefix server",
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "db:migrate": "npm run db:migrate --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
