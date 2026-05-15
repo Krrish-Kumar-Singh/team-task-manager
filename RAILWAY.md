@@ -4,16 +4,18 @@
 
 This happens when **migrations run before** `DATABASE_URL` exists on the web service.
 
-### Fix 1 — Remove pre-deploy migrate (IMPORTANT)
+### Fix 1 — Pre-deploy command (can't delete in UI?)
 
-1. Open **team-task-manager** (web service, not Postgres)
-2. **Settings** → **Deploy**
-3. Find **Pre-deploy command** / **Pre-deploy**
-4. **Clear it** (must be empty — delete `npm run db:migrate` if present)
-5. **Start command** should be only: `npm start`
-6. Save and **Redeploy**
+The repo now **overrides** the dashboard via `railway.toml` / `railway.json`:
 
-Migrations run automatically when the app starts (after `DATABASE_URL` is loaded).
+- Pre-deploy is a harmless `echo` (no Prisma)
+- Migrations run when the app starts
+
+**Redeploy from GitHub** after pulling latest `main`.
+
+If the UI still shows an old command, ignore it — repo config wins on deploy.
+
+Optional: **team-task-manager** → **Settings** → enable **Config-as-code** / use repo `railway.toml`.
 
 ---
 
