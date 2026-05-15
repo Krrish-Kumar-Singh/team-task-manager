@@ -1,49 +1,72 @@
-# Railway setup (TaskFlow)
+# Railway deploy fix guide
 
-## Your config is mostly correct
+## Error: `Environment variable not found: DATABASE_URL`
 
-These settings are fine:
+This happens when **migrations run before** `DATABASE_URL` exists on the web service.
 
-- `builder = NIXPACKS`
-- `startCommand = npm start`
-- `healthcheckPath = /api/health`
+### Fix 1 — Remove pre-deploy migrate (IMPORTANT)
 
-## Required variables (web service `team-task-manager`)
+1. Open **team-task-manager** (web service, not Postgres)
+2. **Settings** → **Deploy**
+3. Find **Pre-deploy command** / **Pre-deploy**
+4. **Clear it** (must be empty — delete `npm run db:migrate` if present)
+5. **Start command** should be only: `npm start`
+6. Save and **Redeploy**
 
-| Variable | Value |
-|----------|--------|
-| `DATABASE_URL` | **Variable reference** → Postgres → `DATABASE_URL` |
-| `JWT_SECRET` | Long secret string |
+Migrations run automatically when the app starts (after `DATABASE_URL` is loaded).
+
+---
+
+### Fix 2 — Link Postgres to the web service
+
+`DATABASE_URL` must be on **team-task-manager**, not only on Postgres.
+
+1. Click **team-task-manager** → **Variables**
+2. **+ New Variable** → **Add variable reference**
+3. Service: **Postgres**
+4. Variable: **`DATABASE_URL`**
+5. Save
+
+Also add manually:
+
+| Name | Value |
+|------|--------|
+| `JWT_SECRET` | any long secret |
 | `NODE_ENV` | `production` |
 
-## Do NOT set
+**Delete:** `PORT`, `CLIENT_ORIGIN=localhost`
 
-| Variable | Why |
-|----------|-----|
-| `PORT` | Railway sets this automatically — `PORT=3001` breaks healthcheck |
-| `CLIENT_ORIGIN=http://localhost:5173` | Wrong for production |
+---
 
-## Optional
+### Fix 3 — Do not use root `db:migrate` on Railway
 
-`CLIENT_ORIGIN` = your public Railway URL, e.g. `https://xxx.up.railway.app`
+Never set these on Railway:
 
-## Dashboard vs repo
+- Pre-deploy: `npm run db:migrate`
+- Start: `npm run db:migrate && npm start`
 
-Railway reads `railway.json` / `railway.toml` from GitHub. After push, redeploy.
-
-In the dashboard you can set **healthcheckTimeout** to **300** (seconds).
-
-## Test after deploy
+Use only:
 
 ```
-https://YOUR-APP.up.railway.app/api/health
+npm start
 ```
 
-Expect: `"status": "ok"`, `"hasDatabase": true`, `"hasJwt": true`
+---
 
-## Project layout (one project)
+## Correct deploy flow
 
 ```
-Postgres          → Online
-team-task-manager → Online (after variables + deploy)
+Build  → npm install + npm run build
+Start  → npm start → node server (migrations run inside app)
+Health → GET /api/health → 200 OK
+```
+
+---
+
+## Test
+
+`https://YOUR-APP.up.railway.app/api/health`
+
+```json
+{ "status": "ok", "env": { "hasDatabase": true, "hasJwt": true } }
 ```
